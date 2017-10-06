@@ -3,9 +3,12 @@
 <html>
   <head>
     <style>
+        body {
+            background-color: black;
+        }
       rect.bordered {
         stroke: #E6E6E6;
-        stroke-width:2px;   
+        stroke-width:0.05px;   
       }
 
       text.mono {
@@ -45,17 +48,17 @@
           width = 960 - margin.left - margin.right,
           height = 430 - margin.top - margin.bottom,
           gridSize = Math.floor(width / 50),
-          legendElementWidth = gridSize*2,
+          legendElementWidth = gridSize*1,
           buckets = 5,
           colors = d3.schemeBlues[9],
           // ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b"]   //["#ffffff","#E0E0E0","#C8C8C8","#A9A9A9","#888888","#686868","#484848","#282828","#000000"], // alternatively colorbrewer.YlGnBu[9]
           days = ["2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016"],
           times = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-          datasets = ["data.tsv", "data1.tsv"];
+          datasets = ["out.tsv", "data.tsv"];
 
         
         
-            console.log(colors);
+        //console.log(colors);
 
       var svg = d3.select("#chart").append("svg")
           .attr("width", width + margin.left + margin.right)
@@ -89,6 +92,7 @@
        // console.log(d);
 
           return {
+            index: +d.index,
             day: +d.day,
             hour: +d.hour,
             value: +d.value
@@ -98,6 +102,7 @@
         function(error, data) {
           var colorScale = d3.scale.quantile()
               .domain([0, 0.6, d3.max(data, function (d) { 
+                  console.log(d)
                   return d.value; })])
               .range(colors);
 
@@ -109,13 +114,13 @@
           cards.append("title");
 
           cards.enter().append("rect")
-              .attr("x", function(d) { return (d.hour - 1) * gridSize; })
-              .attr("y", function(d) { return (d.day - 2003) * gridSize; })
-              .attr("rx", 4)
-              .attr("ry", 4)
+              .attr("x", function(d) { return (d.index + 1) * gridSize/10; })
+              .attr("y", function(d) { return (d.day - d.day+1) * gridSize; })
+              .attr("rx", 0)
+              .attr("ry", 0)
               .attr("class", "hour bordered")
-              .attr("width", gridSize)
-              .attr("height", gridSize)
+              .attr("width", gridSize/4)
+              .attr("height", gridSize/2)
               .style("fill", colors[0]);
           
             //console.log(cards[0]);
