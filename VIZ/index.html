@@ -3,12 +3,9 @@
 <html>
   <head>
     <style>
-        body {
-            background-color: whitesmoke;
-        }
       rect.bordered {
         stroke: #E6E6E6;
-        stroke-width:0.05px;   
+        stroke-width:2px;   
       }
 
       text.mono {
@@ -26,40 +23,22 @@
       }
     </style>
     <script src="http://d3js.org/d3.v3.js?2"></script>
-    <script src="https://d3js.org/d3-color.v1.min.js"></script>
-    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
-    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
-    <script src="https://d3js.org/d3-array.v1.min.js"></script>
-    <script src="https://d3js.org/d3-collection.v1.min.js"></script>
-    <script src="https://d3js.org/d3-color.v1.min.js"></script> 
-    <script src="https://d3js.org/d3-format.v1.min.js"></script>
-    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
-    <script src="https://d3js.org/d3-time.v1.min.js"></script>
-    <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
-    <script src="https://d3js.org/d3-scale.v1.min.js"></script>
   </head>
   <body>
     <div id="chart"></div>
     <div id="dataset-picker">
     </div>
     <script type="text/javascript">
-        
-      var margin = { top: 50, right: 0, bottom: 100, left: 50 },
+      var margin = { top: 50, right: 0, bottom: 100, left: 30 },
           width = 960 - margin.left - margin.right,
           height = 430 - margin.top - margin.bottom,
           gridSize = Math.floor(width / 50),
-          legendElementWidth = gridSize*1,
-          buckets = 5,
-          colors = d3.schemeBlues[9],
-          // ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b"]   //["#ffffff","#E0E0E0","#C8C8C8","#A9A9A9","#888888","#686868","#484848","#282828","#000000"], // alternatively colorbrewer.YlGnBu[9]
-          //https://github.com/d3/d3-scale-chromatic#schemeBlues
-          days = ["2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016"],
-          times = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-          datasets = ["out.tsv", "data.tsv"];
-
-        
-        
-        //console.log(colors);
+          legendElementWidth = gridSize*2,
+          buckets = 9,
+          colors = ["#ffffff","#E0E0E0","#C8C8C8","#A9A9A9","#888888","#686868","#484848","#282828","#000000"], // alternatively colorbrewer.YlGnBu[9]
+          days = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+          times = ["1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12a", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p", "12p"];
+          datasets = ["data.tsv", "data1.tsv"];
 
       var svg = d3.select("#chart").append("svg")
           .attr("width", width + margin.left + margin.right)
@@ -90,10 +69,9 @@
       var heatmapChart = function(tsvFile) {
         d3.tsv(tsvFile,
         function(d) {
-       // console.log(d);
+        console.log(d);
 
           return {
-            index: +d.index,
             day: +d.day,
             hour: +d.hour,
             value: +d.value
@@ -102,8 +80,7 @@
         },
         function(error, data) {
           var colorScale = d3.scale.quantile()
-              .domain([0, 0.6, d3.max(data, function (d) { 
-                  console.log(d)
+              .domain([0, 1.2, d3.max(data, function (d) { 
                   return d.value; })])
               .range(colors);
 
@@ -115,13 +92,13 @@
           cards.append("title");
 
           cards.enter().append("rect")
-              .attr("x", function(d) { return (d.index + 1) * gridSize/8; })
-              .attr("y", function(d) { return (d.day - d.day+1) * gridSize; })
-              .attr("rx", 0)
-              .attr("ry", 0)
+              .attr("x", function(d) { return (d.hour - 1) * gridSize; })
+              .attr("y", function(d) { return (d.day - 2003) * gridSize; })
+              .attr("rx", 4)
+              .attr("ry", 4)
               .attr("class", "hour bordered")
-              .attr("width", gridSize/4)
-              .attr("height", gridSize/2)
+              .attr("width", gridSize)
+              .attr("height", gridSize)
               .style("fill", colors[0]);
           
             //console.log(cards[0]);
@@ -170,12 +147,6 @@
         .on("click", function(d) {
           heatmapChart(d);
         });
-        
-        
-        
-        //git add VIZZ
-        //git commit -m "initial commit1"
-        //git push -u origin master
     </script>
   </body>
 </html>
