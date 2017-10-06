@@ -98,7 +98,7 @@
         },
         function(error, data) {
           var colorScale = d3.scale.quantile()
-              .domain([0, 0.5, d3.max(data, function (d) { 
+              .domain([0, 0.6, d3.max(data, function (d) { 
                   return d.value; })])
               .range(colors);
 
