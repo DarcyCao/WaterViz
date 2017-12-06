@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Map view</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #cccccc;
+				margin: 0px;
+				overflow: hidden;
+			}
+/*
+            a {
+                font-size: 50px
+            }
+*/
+            a, button {
+                display: inline-block;     
+                position: relative;
+                z-index: 1;     
+                padding: 1em;     
+                margin: .3em;
+                
+            }
+		</style>
+	</head>
+	<body>
+        <br>
+        <button id="camerareset">Reset Camera</button>
+        <button id="resetmap">Reset Map</button>
+        <button id="editmap" >Play with Map</button>
+        <button id="colorbytemp">Color Map by Tempreture</button>
+        <button id="showGraphs">Show Water Data</button>
+        <button id="showGraphs">Show Gas and Electricity Data</button>
+        <button id="showGraphs">Hide All Data</button>
+
+        <br>
+        <button id="shot">Screenshot</button>
+        <button id="mapcoordinates">Save Map Settings</button>
+
+        <button id="comparestate">Compare Mode</button>
+        
+        
+<!--       
+control
+https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_editor.html-->
+<!--        new set of x, y value to show the breaking down effect-->
+
+<!--        <a href="3dWaterViz2.html" id="editmap">Edit map off</a>-->
+
+        <script src="three.js-master/build/three.js"></script>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+<!--
+        <script type="text/javascript" src="three.js-master/build/three.min.js"></script>
+        <script type="text/javascript" src="three.js-master/build/three-vr-viewer.js"></script>
+
+-->
+
+		<script src="js/controls/DragControls.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+        <script src="js/Detector.js"></script>
+        <script src="three.js-master/examples/js/loaders/STLLoader.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script>
+            //TO DO
+            //change text
+            //document.getElementById("peep").innerHTML = "Welcome " + name;
+            
+            const states = ["AK","AL","AZ","AR","CA","CO","CT","DE","FL","GA","HI","IL","ID","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+                
+                
+                
+            const xpstn = [-771.5195426637397,192.9120623696258,-380.5345212538828,62.55575967266884,-578.3734923627312,-234.9815409434305,455.2701253106838,425.2814168558325,218.36344644986104,253.7395028474221,-285.67440522041346,120.43517222396176,-368.1286023540158,187.454144117512,22.62435981878511,-90.34250818635275,163.75919090056604,77.3213723218617,468.61813310943427,352.5637913514511,455.2592937680254,133.06736799868054,12.411404639514473,124.83274671877716,37.68743829619295,-334.7916130692514,-123.64529187550059,-468.97549792092764,457.3270990773462,426.3402744226916,-255.9633981260098,327.05607636604043,274.4917707300043,-108.04654217758784,246.1883076086239,-118.58072822073825,-501.49653486182626,325.9866073420785,491.3626630036835,298.20059332728704,-118.08152677724465,151.53222017545247,-220.66269959637145,-337.2844614009403,440.4581975225201,276.4765650848281,-481.25521056718935,291.19910626454407,90.9059015422269,-258.190187286931];
+                
+            const ypstn = [-244.73866881936206,-170.95915978327184,-122.88563450598433,-102.99262542548735,-73.47697016716467,2.7706313421242825,145.7822451956747,77.5778746760653,-320.163066823004,-162.14050818154948,-329.7023565104875,1.3612283689822107,147.3054252059451,24.92761366302522,85.66417768067507,-1.5394908753911665,-9.189052794202816,-208.65012259352386,199.30113656936916,48.430856172151834,154.488127852715,118.44670734139257,165.42389528007405,-176.3295372683515,-27.281742794884494,195.22022354102592,75.8523620509458,-13.290833751604424,194.28437725247764,89.12685540976432,-141.97420200078307,111.08089832317293,-67.75510784306641,229.2486167364129,46.13026605921847,-89.50964071151921,173.4100614319632,90.03061465340473,160.9310187192081,-111.29443948011468,139.21921078942634,-50.04576678050063,-293.0284193100634,19.84758308148158,193.96006796192128,2.9471042530664704,266.18333415989605,18.93964643833037,137.71526067747104,109.38877671240826];
+                
+            var mapEditMode = false;
+            
+			var container, stats;
+			var camera, controls, scene, renderer;
+			var objects = [];
+            var statesStl = [];
+            var map = [];
+            var buildingCount = 20;
+			init();
+			animate();
+            
+            const material = new THREE.MeshPhongMaterial( { color: 0x585858, specular: 0x111111, shininess: 200 } );
+            
+
+            
+            function makeBoxes() {
+                const boxz = 0;
+
+                var geometry = new THREE.BoxGeometry( 10, 10, 0 );
+				for ( var i = 0; i < buildingCount; i ++ ) {
+                    const material0 = new THREE.MeshBasicMaterial( { color: 0xffffff} );
+					var object = new THREE.Mesh( geometry, material0);//new THREE.MeshStandardMaterial( { color: 0xa31a28 } ) );//Math.random() * 
+					object.position.x = Math.random() * 1000 - 500;
+					object.position.y = Math.random() * 600 - 300;
+					object.position.z = boxz;//0;//Math.random() * 800 - 400;
+					object.rotation.x = 0;//Math.random() * 2 * Math.PI;
+					object.rotation.y = 0;//Math.random() * 2 * Math.PI;
+					object.rotation.z = 0;//Math.random() * 2 * Math.PI;
+					object.scale.x = 1;//Math.random() * 2 + 1;
+					object.scale.y = 1;//Math.random() * 2 + 1;
+					object.scale.z = 1;//Math.random() * 2 + 1;
+					object.castShadow = true;
+					object.receiveShadow = false;
+					scene.add( object );
+					objects.push( object );
+                    
+//                    var lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+//                    var lineGeometry = new THREE.Geometry();
+//                    var x = object.position.x;
+//                    var y = z = 5000;
+//                    lineGeometry.vertices.push(new THREE.Vector3(x, y, z));
+//                    var line = new THREE.Line(lineGeometry, lineMaterial);
+//                    scene.add( line );
+//                    lines.push(line);
+				}
+            }
+            
+            
+            
+            
+            
+            function makeMap() {
+                var loader = new THREE.STLLoader();
+                
+                //stl 3d model from https://www.thingiverse.com/thing:1524543
+                var counter = 0;
+                for ( var i = 0; i < states.length; i ++ ) {
+                    loader.load( 'usmap/'+states[i]+'.stl', function ( geometry ) {
+					
+					var mesh = new THREE.Mesh( geometry, material );
+					mesh.position.set( xpstn[counter], ypstn[counter], -50 ); 
+                        //x:-1200+250*(counter%10) y:200+180*Math.floor(counter/10)
+                    //console.log(i, mesh.position.y);
+					mesh.rotation.set( Math.PI/2, 0, Math.PI*2);
+					mesh.scale.set(.6, .6,.6);
+					mesh.castShadow = true;
+					mesh.receiveShadow = true;
+					scene.add(mesh);
+                    statesStl.push(mesh);
+                    counter ++;
+				} );
+                }
+                
+                
+            }
+            
+            
+            
+            
+            
+			function init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 1000;
+                //console.log(camera);
+                //var oriCamera = JSON.parse(JSON.stringify( camera ));
+
+				controls = new THREE.TrackballControls( camera );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.noZoom = false;
+				controls.noPan = false;
+				controls.staticMoving = false;
+				controls.dynamicDampingFactor = 0.3;
+                
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xd3d3d3 );
+				scene.add( new THREE.AmbientLight( 0x505050 ) );
+				var light = new THREE.SpotLight( 0xB8B8B8, 0.5 );
+				light.position.set( 0, 500, 2000 );
+				light.castShadow = true;
+				light.shadow = new THREE.LightShadow( new THREE.PerspectiveCamera( 50, 1, 200, 10000 ) );
+				light.shadow.bias = - 0.00022;
+				light.shadow.mapSize.width = 2048;
+				light.shadow.mapSize.height = 2048;
+				scene.add( light );
+                
+                
+                
+                //////////////////make boxes/////////////////
+                
+				makeBoxes();
+                
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFShadowMap;
+				container.appendChild( renderer.domElement );
+                
+                document.getElementById("shot").addEventListener('click', takeScreenshot);
+                document.getElementById("camerareset").addEventListener('click', cameraReset);
+                document.getElementById("mapcoordinates").addEventListener('click', mapCoordinates);
+                document.getElementById("resetmap").addEventListener('click', resetMap);
+                document.getElementById("editmap").addEventListener('click', editMap);
+                document.getElementById("colorbytemp").addEventListener('click', colorByTemp);
+
+                
+                
+				var dragControls = new THREE.DragControls( objects, camera, renderer.domElement );
+//                dragControls.rotate = false;
+//                dragControls.zoomSpeed = 1.2;
+//                dragControls.panSpeed = 0.8;
+//                dragControls.noZoom = false;
+//                dragControls.noPan = false;
+//                dragControls.staticMoving = true;
+//                dragControls.dynamicDampingFactor = 0.3;
+				dragControls.addEventListener( 'dragstart', function ( event ) { controls.enabled = false; } );
+				dragControls.addEventListener( 'dragend', function ( event ) { controls.enabled = true; } );
+                
+                
+              
+                
+				var info = document.createElement( 'div' );
+				info.style.position = 'absolute';
+				info.style.top = '10px';
+				info.style.width = '100%';
+				info.style.textAlign = 'center';
+//				info.innerHTML = '<a href="3dWaterViz2.html">Map view</a>';
+				container.appendChild( info );
+				//stats = new Stats();
+				//container.appendChild( stats.dom );
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+                
+                
+                
+                
+                
+                
+                /////////////map settings///////////////
+                
+                makeMap();
+                
+            
+
+				                
+			}
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			//
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+				//stats.update();
+			}
+			function render() {
+				controls.update();
+				renderer.render( scene, camera );
+			}
+            
+            function takeScreenshot() {
+                console.log("taking screeshot...");
+                // open in new window like this
+                var w = window.open('', '');
+                w.document.title = "Screenshot";
+                //w.document.body.style.backgroundColor = "red";
+                var img = new Image();
+                // Without 'preserveDrawingBuffer' set to true, we must render now
+                renderer.render(scene, camera);
+                img.src = renderer.domElement.toDataURL();
+                w.document.body.appendChild(img);
+                // download file
+                var a = document.createElement('a');
+                // Without 'preserveDrawingBuffer' set to true, we must render now
+                renderer.render(scene, camera);
+                a.href = renderer.domElement.toDataURL().replace("image/png", "image/octet-stream");
+                a.download = 'canvas.png';
+                a.click();
+            }
+            
+            function cameraReset() {
+                console.log("Reseting camera...");
+                //console.log(camera);             
+                camera.position.x = 0;
+                camera.position.y = 0;
+                camera.position.z = 1000;
+                camera.rotation.x = 0;
+                camera.rotation.y = 0;
+                camera.rotation.z = 0;
+                controls.reset();
+                //window.innerWidth / window.innerHeight, 1, 10000
+            }
+            function mapCoordinates() {
+                //statesStl = [];
+                var xs = [];
+                var ys = [];
+                console.log(statesStl.length, buildingCount);
+                //locate all state stl files
+                for (var i = 0; i < statesStl.length; i++) {
+                    //statesStl.push(objects[i]);
+                    xs.push(statesStl[i].position.x);
+                    ys.push(statesStl[i].position.y);
+                    console.log(statesStl.length);
+                    
+                }
+                console.log(statesStl.length);
+                
+                const linkx = document.createElement( 'a' );
+                linkx.style.display = 'none';
+                document.body.appendChild( linkx );
+
+                const blobx = new Blob( [ xs ], { type: 'text/plain' } );	
+                const objectURLx = URL.createObjectURL( blobx );
+
+                linkx.href = objectURLx;
+                linkx.href = URL.createObjectURL( blobx );
+                linkx.download = 'x_map_setting.json';
+                
+                linkx.click();
+                
+                
+                
+                const linky = document.createElement( 'a' );
+                linky.style.display = 'none';
+                document.body.appendChild( linky );
+
+                const bloby = new Blob( [ ys ], { type: 'text/plain' } );	
+                const objectURLy = URL.createObjectURL( bloby );
+
+                linky.href = objectURLy;
+                linky.href = URL.createObjectURL( bloby );
+                linky.download = 'y_map_setting.json';
+                
+                linky.click();
+                
+                
+                
+                
+                //https://discourse.threejs.org/t/how-to-create-a-new-file-and-save-it-with-arraybuffer-content/628/3
+
+            }
+            
+            
+            function resetMap() {
+                var counter = 0;
+                for (var i = 0; i < statesStl.length; i++) {
+                    statesStl[i].position.x = xpstn[counter];
+                    statesStl[i].position.y = ypstn[counter]; 
+                    statesStl[i].position.z = -100;
+                    statesStl[i].material = material;
+
+                    counter++;   
+                } 
+                
+                
+            }
+            
+            function colorByTemp() {   
+                var material2 = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x111111, shininess: 20 } );
+                var counter = 0;
+                for (var i = 0; i < statesStl.length; i++) {
+                    statesStl[i].material = material2;
+                    counter++;
+                }
+            }
+            
+            
+            function editMap() {
+                if (mapEditMode == false) {
+                    mapEditMode = true;
+                    var dragControlsMap = new THREE.DragControls( statesStl, camera, renderer.domElement );
+                    dragControlsMap.addEventListener( 'dragstart', function ( event ) { controls.enabled = false; } );
+                    dragControlsMap.addEventListener( 'dragend', function ( event ) { controls.enabled = true; } );
+                }
+                else if (mapEditMode == true){
+                    mapEditMode = false;
+
+                    //controls.enabled = true;
+                   // dragControlsMap.abort;
+                    
+                    //not working
+                }
+                
+                console.log("edit mode:", mapEditMode);
+                
+            }
+            
+          
+
+           
+            
+          
+            
+            
+            //https://jsfiddle.net/2pha/art388yv/
+            //chrome://flags/#enable-webvr
+                        //VRViewer({THREE});
+//python -m SimpleHTTPServer
+            //localhost:8000
+		</script>
+
+	</body>
+</html>
