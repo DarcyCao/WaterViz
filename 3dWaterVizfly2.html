@@ -23,6 +23,14 @@
                 margin: .1em;
                 
             }
+            #info {
+	position: absolute;
+	top: 10px;
+	width: 100%;
+	text-align: center;
+	z-index: 100;
+	display:block;
+}
             body {
               width: 100%;
               height: 100%;
@@ -36,8 +44,9 @@
 		</style>
 	</head>
 	<body>
-        <a>Dashboard</a>
-        <br>
+<!--        <a>Dashboard</a>-->
+<!--        <br>-->
+<!--
         <button onclick="location.href='3dWaterVizfly.html'" type="button">Reset All</button>
         <button id="camerareset">Reset Camera</button>
         <button id="resetmap">Reset Map</button>
@@ -55,6 +64,10 @@
 
         <button id="comparestate">Compare Mode</button>
         
+-->
+        
+<!--        <div id="info">Visualize Water Data By Building</div>-->
+        
 <!--       
 control
 https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_editor.html-->
@@ -65,6 +78,8 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
         <script src="three.js-master/build/three.js"></script>
         <script src="https://d3js.org/d3.v4.min.js"></script>
         <script src="js/controls/FlyControls.js"></script>
+        <script src="js/renderers/Projector.js"></script>
+		<script src="js/renderers/CanvasRenderer.js"></script>
 
 <!--
         <script type="text/javascript" src="three.js-master/build/three.min.js"></script>
@@ -103,7 +118,7 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
             var mapEditMode = false;
             
 			var container, stats;
-			var camera, controls, scene, renderer;
+			var camera, controls, scene, raycaster, renderer;
 			var objects = [];
             var statesStl = [];
             var wdbs = [];
@@ -114,7 +129,13 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 			init();
 			animate();
             
-            const material = new THREE.MeshPhongMaterial( { color: 0x585858, specular: 0x111111, shininess: 200 } );
+            
+            var w = window.innerWidth;
+            var h = window.innerHeight;
+            var fullWidth = w * 1;
+            var fullHeight = h * 1;
+            
+            const material = new THREE.MeshPhongMaterial( { color: 0xA2D9F0, specular: 0x111111, shininess: 200 } );
             
 
             var lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
@@ -127,6 +148,8 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
             var bldgIndex, sqft, bldgId, bldgData, bldgState, bldgStateIndex;
             
             const material0 = new THREE.MeshBasicMaterial( { color: 0xA2D9F0} );
+            const material01 = new THREE.MeshBasicMaterial( { color: 0xC27BA0} );
+
             
             const material1 = new THREE.MeshBasicMaterial( { color: 0xF8EFB6} );
             
@@ -137,7 +160,32 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
             
             
             
-        
+            //select vars
+//            var raycaster;
+//			var mouse;
+//         
+//            var pickingData = [], pickingTexture, pickingScene;
+//
+//            var highlightBox;
+//            var mouse = new THREE.Vector2();
+//			var offset = new THREE.Vector3( 10, 10, 10 );
+            var mouse;
+            var INTERSECTED;
+			var radius = 100, theta = 0;
+            
+            //select vars end
+            
+            
+            var effectController = {
+				showDots: true,
+				showLines: true,
+				minDistance: 150,
+				limitConnections: false,
+				maxConnections: 20,
+				particleCount: 500
+			};
+            
+            
             
             
             function drawWaterData(dataPoints) {
@@ -213,11 +261,7 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 
                     });
                 }
-            }
-               
-            
-            
-          
+            } 
             
 
             function showWaterData() {
@@ -237,9 +281,9 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
             
             function drawWaterData2(dataPoints) {
                 
-                group = new THREE.Group();
-                group.position.y = 50;
-				scene.add( group );
+               // group = new THREE.Group();
+                //group.position.y = 50;
+				//scene.add( group );
 				var loader = new THREE.TextureLoader();
 				var texture = loader.load( "wave.jpg" );
 				// it's necessary to apply these settings in order to correctly display the texture on a shape geometry
@@ -268,9 +312,10 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 					mesh.position.set( x, y, z);
 					mesh.rotation.set( rx, ry, rz );
 					mesh.scale.set( s, s, s );
-					group.add( mesh );
+					//group.add( mesh );
+                     scene.add(mesh);
                      objects.push( mesh );
-
+                     
 					//addLineShape( shape, color, x, y, z, rx, ry, rz, s );
 				}
 //				function addLineShape( shape, color, x, y, z, rx, ry, rz, s ) {
@@ -308,10 +353,13 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                 
                 idx = 0;
                 //loop through all buildings in the name list
-                for (var i = 0; i < 10; i++) { //waterDataNames.length 
+                for (var i = 0; i < waterDataNames.length; i++) { //waterDataNames.length 
                     idx += 1;
                     //console.log(idx);
                                  
+                    
+                    
+                    
                     d3.json(waterDataNames[i], function(error, dataPoints) {
                         var index;
                         //console.log(idx);
@@ -335,15 +383,36 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                         for (var k = 0; k < waterDataNames.length; k++) {
                            if (waterDataNames[k].indexOf(bldgId) !== -1) {
                               // console.log(bldgId);
-                               z = k*5;
+                               z = k*20;
                            }
                        }
+                        
+                        
+                        
+                        
+                        
+                        
+                        
                         var lineGeometry = new THREE.Geometry();
                         //lineGeometry.vertices.push(new THREE.Vector3(x, y, z));
-                        
+                      //  var textGeo = new THREE.TextGeometry();
                         var shape = new THREE.Shape();
                         
-                        shape.moveTo(bldgData[0].index*3, bldgData[0].water*20, z);
+                        
+                        
+                        
+//                        
+//                        textGeo.position.x = x;
+//                        textGeo.position.y = y;
+//                        textGeo.position.z = z;
+//
+//                       // vertices.push(new THREE.Vector3(x, y, z));
+//                        textGeo.text = bldgId;
+//                        
+//                        
+                        
+                        
+//                        shape.moveTo(bldgData[0].index*3, bldgData[0].water*20, z);
                         //loop through all points for each building
                         for (var j = 0; j < bldgData.length; j++) {
                             x = bldgData[j].index*3;
@@ -353,15 +422,24 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                             //z = idx;
                             //console.log(z);
                             lineGeometry.vertices.push(new THREE.Vector3(x, y, z));
+                            
                             shape.lineTo(x, y, z);
+                            
                         }
-                        
+                        shape.lineTo(bldgData[bldgData.length-1].index*3, 0, z);
                         shape.lineTo(bldgData[0].index*3, 0, z);
 
-
-                    
+                        shape.lineTo(bldgData[0].index*3-80, 0, z);
+                        shape.lineTo(bldgData[0].index*3-80, 5, z);
+                        shape.lineTo(bldgData[0].index*3-75, 5, z);
+                        shape.lineTo(bldgData[0].index*3-75, 5, z);
+                        shape.lineTo(bldgData[0].index*3-75, 1, z);
+                        shape.lineTo(bldgData[0].index*3, 1, z);
                         var lines = new THREE.Line(lineGeometry, lineMaterial);
                         scene.add(lines);
+                        
+                        
+                        //scene.add(textGeo);
                         
                         //console.log(lines);
 
@@ -370,7 +448,19 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 
                         addShape( shape, extrudeSettings, 0xffffff, 0, 0, z, 0, 0, 0, 1 );//bldgData[0].index*3, bldgData[0].water*20
 
-
+//
+//                        
+//                        var geometry = new THREE.SphereGeometry( 5, 16,16 );
+//                        var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+//                        var sphere = new THREE.Mesh( geometry, material );
+//                        sphere.position.x = bldgData[0].index*3;
+//                        sphere.position.y = 0;
+//                        sphere.position.z = z;
+//                        scene.add( sphere );
+//                        objects.push(sphere);
+//                        
+                        
+                        
                     });
                 }
             }
@@ -414,19 +504,21 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                 }     
             }
             
-            
-            
 
             function setClickListeners() {
 //                document.getElementById("resetall").addEventListener('click', init);
-                document.getElementById("shot").addEventListener('click', takeScreenshot);   document.getElementById("camerareset").addEventListener('click', cameraReset);
-                document.getElementById("mapcoordinates").addEventListener('click', mapCoordinates);
-                document.getElementById("resetmap").addEventListener('click', resetMap);
-                document.getElementById("editmap").addEventListener('click', editMap);
-                document.getElementById("colorbytemp").addEventListener('click', colorByTemp);
-                document.getElementById("showWater").addEventListener('click', showWaterData);
+//                document.getElementById("shot").addEventListener('click', takeScreenshot);   document.getElementById("camerareset").addEventListener('click', cameraReset);
+//                document.getElementById("mapcoordinates").addEventListener('click', mapCoordinates);
+//                document.getElementById("resetmap").addEventListener('click', resetMap);
+//                document.getElementById("editmap").addEventListener('click', editMap);
+//                document.getElementById("colorbytemp").addEventListener('click', colorByTemp);
+//                document.getElementById("showWater").addEventListener('click', showWaterData);
+//                
+//                document.getElementById("showWaterbldg").addEventListener('click', showWaterDatabldg);
+//                
                 
-                document.getElementById("showWaterbldg").addEventListener('click', showWaterDatabldg);
+                document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
 
                 
 //                document.getElementById("showwdbs").addEventListener('click', showWaterDataByState);
@@ -443,19 +535,34 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 
             }
         
-            
+            function initGUI() {
+				var gui = new dat.GUI();
+				gui.add( effectController, "showDots" ).onChange( function( value ) { pointCloud.visible = value; } );
+				gui.add( effectController, "showLines" ).onChange( function( value ) { linesMesh.visible = value; } );
+				gui.add( effectController, "minDistance", 10, 300 );
+				gui.add( effectController, "limitConnections" );
+				gui.add( effectController, "maxConnections", 0, 30, 1 );
+				gui.add( effectController, "particleCount", 0, maxParticleCount, 1 ).onChange( function( value ) {
+					particleCount = parseInt( value );
+					particles.setDrawRange( 0, particleCount );
+				});
+			}
             
 			function init() {
+               // initGUI();
                 stateXs = xpstn;
                 stateYs = ypstn;
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
-				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.z = 1000;
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 100000 );
+				camera.position.z = 9000;
+                camera.position.y = 1800;
+                camera.position.x = -500;
                 //console.log(camera);
                 //var oriCamera = JSON.parse(JSON.stringify( camera ));
-                
+                //camera.setViewOffset( fullWidth, fullHeight, -500, -500, w, h );
+
                 
 //				flyControls = new THREE.FlyControls( camera );
 //				flyControls.movementSpeed = 1000;
@@ -476,7 +583,7 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 				controls.dynamicDampingFactor = 0.3;
                 
 				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0x898989 );
+				//scene.background = new THREE.Color( 0x898989 );
 				scene.add( new THREE.AmbientLight( 0x505050 ) );
 				var light = new THREE.SpotLight( 0xB8B8B8, 0.5 );
 				light.position.set( 0, 500, 2000 );
@@ -488,12 +595,17 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 				scene.add( light );
                 
                 
-                
+
                 //////////////////make boxes/////////////////
                 
 //				makeBoxes();
                 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
+                mouse = new THREE.Vector2();
+                
+                raycaster = new THREE.Raycaster();
+
+                
+				renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.shadowMap.enabled = true;
@@ -501,60 +613,97 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
 				container.appendChild( renderer.domElement );
 
                 
+                
+                
+                
                 setClickListeners();
                 
 				var dragControls = new THREE.DragControls( objects, camera, renderer.domElement );
-//                dragControls.rotate = false;
-//                dragControls.zoomSpeed = 1.2;
-//                dragControls.panSpeed = 0.8;
-//                dragControls.noZoom = false;
-//                dragControls.noPan = false;
-//                dragControls.staticMoving = true;
-//                dragControls.dynamicDampingFactor = 0.3;
 				dragControls.addEventListener( 'dragstart', function ( event ) { controls.enabled = false; } );
 				dragControls.addEventListener( 'dragend', function ( event ) { controls.enabled = true; } );
-                
-                
+
+
               
                 
 				var info = document.createElement( 'div' );
 				info.style.position = 'absolute';
 				info.style.top = '10px';
 				info.style.width = '100%';
-				info.style.textAlign = 'center';
-//				info.innerHTML = '<a href="3dWaterViz2.html">Map view</a>';
+				info.style.textAlign = 'left';
+				info.innerHTML = '<a href="3dWaterVizfly2.html">View Water Data in Each Building</a><br><a>W: zoom in</a><br><a>S: zoom out</a><br><a>A: turn left</a><br><a>D: turn right</a><br><a><: move screen to the left</a><br><a>>: move screen to the right</a><br><a>Hover on model to lock;</a><br><a>Click and drag to move model.</a>';
 				container.appendChild( info );
 				//stats = new Stats();
 				//container.appendChild( stats.dom );
-				//
+				
 				window.addEventListener( 'resize', onWindowResize, false );
                 
                 
                 
-                
-                
-                
+    
                 /////////////map settings///////////////
                 
                // makeMap();
                 showWaterDatabldg();
-				                
+			
+                
+                
+                
+
 			}
+            
 			function onWindowResize() {
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
 				renderer.setSize( window.innerWidth, window.innerHeight );
 			}
-			//
+            
+            function onDocumentMouseMove( event ) {
+				//event.preventDefault();
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+                //console.log(mouse.x, mouse.y);
+			}
+			
 			function animate() {
 				requestAnimationFrame( animate );
 				render();
 				//stats.update();
 			}
+            
 			function render() {
 				controls.update();
                 //flyControls.update();
 				renderer.render( scene, camera );
+                
+                //console.log(scene.children);
+
+                raycaster.setFromCamera( mouse, camera );
+				var intersects = raycaster.intersectObjects( scene.children);
+               // console.log(intersects.length);
+
+				if ( intersects.length > 0 ) {
+                    console.log("have intersects");
+					if ( INTERSECTED != intersects[ 0 ].object ) {
+						if ( INTERSECTED ) INTERSECTED.material = material0;
+						INTERSECTED = intersects[ 0 ].object;
+						INTERSECTED.material = material01;
+						//INTERSECTED.material.emissive.setHex( 0xff0000 );                  
+                        console.log("intersected 1");
+                        console.log(INTERSECTED);
+
+					}
+				} 
+                
+                else {
+                    if ( INTERSECTED ) INTERSECTED.material = material0;					
+                    INTERSECTED = null;
+                    //console.log("intersected 2");
+
+				}
+				renderer.render( scene, camera );
+                
+                
+                
 			}
             
             function takeScreenshot() {
@@ -666,8 +815,7 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                     statesStl[i].material = material2;
                     counter++;
                 }
-            }
-            
+            }            
             
             function editMap() {
                 if (mapEditMode == false) {
@@ -688,8 +836,7 @@ https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_spline_ed
                 console.log("edit mode:", mapEditMode);
                 
             }
-            
-          
+                   
             var mode;
             var MODE = { TRACKBALL: 0, FLY: 1 };
 
